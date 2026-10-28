@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Moments Practical — Uniform Metre Rule (Draggable Masses)</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --bg:#0a1120; --card:#121d31; --card2:#18253d; --line:#24365a;
+    --text:#e7eefb; --muted:#8ea5c9; --ok:#34d399; --cw:#ff9f6b; --acw:#7aa2ff;
+  }
+  body{
+    margin:0; min-height:100vh; color:var(--text); padding:20px 16px 44px;
+    background:radial-gradient(1200px 700px at 18% -12%,#16233d 0%,#0a1120 62%);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  .wrap{max-width:1280px;margin:0 auto}
+  header h1{margin:0 0 4px;font-size:clamp(1.15rem,2.3vw,1.6rem);letter-spacing:.2px}
+  header p{margin:0 0 16px;color:var(--muted);font-size:.9rem}
+  header em{color:#5eead4;font-style:normal;font-weight:600}
+
+  main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
+  @media (max-width:1020px){main{grid-template-columns:1fr}}
+
+  .stage{
+    position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);
+    background:radial-gradient(120% 110% at 50% -10%,#18283f 0%,#0c1524 74%);
+    box-shadow:0 24px 60px -30px #000 inset,0 10px 30px -18px #000;
+  }
+  canvas#scene{display:block;width:100%;touch-action:none}
+
+  .stage-hint{
+    position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
+    font-size:.72rem;color:#8fb0d8;background:rgba(10,17,32,0.78);
+    border:1px solid #2a3f63;border-radius:20px;padding:5px 15px;
+    pointer-events:none;letter-spacing:.3px;white-space:nowrap;
+    backdrop-filter:blur(6px);transition:opacity .7s ease;
+    box-shadow:0 4px 14px -6px #000;
+  }
+  .stage-hint.fade{opacity:0}
+
+  .panel{display:flex;flex-direction:column;gap:12px}
+  .card{
+    background:linear-gradient(180deg,var(--card2),var(--card));
+    border:1px solid var(--line);border-radius:14px;padding:13px 15px;
+  }
+  .card h2{margin:0 0 8px;font-size:.8rem;letter-spacing:.5px;text-transform:uppercase;color:#9fb6d8;font-weight:700}
+  .muted{color:var(--muted);font-size:.78rem;line-height:1.5;margin:0 0 10px}
+
+  .row-head{display:flex;align-items:center;justify-content:space-between;font-size:.8rem;color:var(--muted);margin:10px 0 7px;gap:8px}
+  .row-head strong{color:var(--text);font-size:.84rem;font-variant-numeric:tabular-nums}
+
+  input[type=range]{width:100%;accent-color:#5eead4;cursor:pointer}
+
+  input[type=number]{
+    background:#0c1524;color:var(--text);border:1px solid var(--line);
+    border-radius:8px;padding:7px 9px;font:inherit;font-size:.84rem;
+    font-variant-numeric:tabular-nums;width:100%;
+    -moz-appearance:textfield;
+  }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  input[type=number]:focus{ outline:none; border-color:#2dd4bf; box-shadow:0 0 0 2px rgba(45,212,191,.15); }
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .fld{display:flex;flex-direction:column;gap:6px;font-size:.71rem;color:var(--muted);letter-spacing:.2px}
+  .fld > span{white-space:nowrap}
+  #m1massSlider, #m1distSlider{accent-color:#ff8f8f}
+  .note{font-size:.7rem;color:#6f86a8;margin:10px 0 2px;line-height:1.45}
+
+  .mini{
+    font-size:.75rem;text-align:center;padding:7px 8px;border-radius:9px;
+    background:#0e1728;border:1px solid #1e2c47;color:var(--muted);
+    font-variant-numeric:tabular-nums;
+  }
+  .mini.ok{color:#0a2018;background:var(--ok);border-color:#0d9e73;font-weight:700}
+
+  .mini-btn{
+    font:inherit;font-size:.68rem;font-weight:700;letter-spacing:.2px;white-space:nowrap;
+    background:#152137;color:#9fc4ff;border:1px solid #2a3f63;
+    border-radius:7px;padding:5px 9px;cursor:pointer;transition:.15s;
+  }
+  .mini-btn:hover{background:#1d2c47;border-color:#3f5a8c;color:#d6e6ff}
+  .mini-btn:active{transform:translateY(1px)}
+  .mini-btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .mass-list{
+    display:flex;flex-direction:column;gap:7px;max-height:300px;
+    overflow-y:auto;padding:2px 3px 2px 0;margin-top:8px;
+    scrollbar-width:thin;scrollbar-color:#2a3f63 transparent;
+  }
+  .mass-list::-webkit-scrollbar{width:6px}
+  .mass-list::-webkit-scrollbar-thumb{background:#2a3f63;border-radius:3px}
+
+  .mass-row{
+    display:flex;flex-direction:column;gap:7px;
+    padding:8px 10px;border-radius:10px;
+    background:#0f1a2b;border:1px solid #1e2c47;
+    cursor:pointer;transition:.15s;
+  }
+  .mass-row:hover{border-color:#2f4569}
+  .mass-row.active{border-color:#2dd4bf;background:#0f2430;box-shadow:0 0 0 1px rgba(45,212,191,.45) inset}
+
+  .mass-top{display:flex;align-items:center;gap:9px}
+  .mass-row .dot{width:10px;height:10px;border-radius:50%;border:2px solid #3a5070;flex:none;transition:.15s}
+  .mass-row.active .dot{border-color:#2dd4bf;background:#2dd4bf;box-shadow:0 0 8px rgba(45,212,191,.6)}
+  .mass-row input.mass-input{width:74px;padding:5px 7px;font-size:.8rem}
+  .mass-row .unit{font-size:.74rem;color:var(--muted)}
+  .mass-row .rec-flag{margin-left:auto;color:#34d399;font-weight:800;font-size:.85rem;width:14px;text-align:center}
+  .mass-row .del{
+    background:transparent;border:1px solid #3a2a3a;color:#c98a9a;
+    width:24px;height:24px;border-radius:6px;cursor:pointer;
+    font-size:.95rem;line-height:1;padding:0;flex:none;transition:.15s;
+  }
+  .mass-row .del:hover{background:#3a1e28;border-color:#7a3a4a;color:#ffb3c1}
+  .mass-row .del:disabled{opacity:.3;cursor:not-allowed}
+  .mass-slider{width:100%;accent-color:#4ecdc4}
+
+  .slider-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+  .slider-foot .mini{flex:1;text-align:center}
+
+  .readout .r{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:.82rem;border-bottom:1px dashed #1e2c47}
+  .readout .r:last-of-type{border-bottom:none}
+  .readout .r span{color:var(--muted)}
+  .readout .r b{font-variant-numeric:tabular-nums;font-size:.86rem}
+  .acw b{color:var(--acw)} .cw b{color:var(--cw)}
+
+  .status{
+    margin-top:10px;text-align:center;font-size:.78rem;font-weight:700;padding:9px 10px;
+    border-radius:10px;border:1px solid;transition:.25s;line-height:1.35;
+    color:#0b1730;background:#f5c04b;border-color:#d1a135;
+  }
+  .status.ok{color:#0a2018;background:var(--ok);border-color:#0d9e73}
+  .status.cw{color:#2a1408;background:var(--cw);border-color:#d97b46}
+  .status.acw{color:#0b1730;background:var(--acw);border-color:#4d7be0}
+
+  table{width:100%;border-collapse:collapse;font-size:.79rem}
+  th,td{padding:7px 3px;text-align:center;border-bottom:1px solid #1e2c47}
+  th{color:var(--muted);font-weight:600;font-size:.62rem;text-transform:uppercase;letter-spacing:.3px}
+  td{font-variant-numeric:tabular-nums;color:#93a9c9}
+  tr.filled td{color:#5eead4;font-weight:600}
+  .empty-note{font-size:.75rem;color:#6f86a8;text-align:center;padding:10px 0}
+
+  button.primary{
+    width:100%;margin-top:11px;font:inherit;font-size:.84rem;font-weight:700;color:#04231f;
+    background:linear-gradient(180deg,#2dd4bf,#14a394);border:1px solid #14a394;border-radius:11px;
+    padding:11px 10px;cursor:pointer;transition:.16s;
+  }
+  button.primary:hover:not(:disabled){filter:brightness(1.1)}
+  button.primary:disabled{background:#17233a;color:#4f6486;border-color:#24365a;cursor:not-allowed}
+  button.primary:active:not(:disabled){transform:translateY(1px)}
+
+  .bottom{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;margin-top:16px}
+  @media (max-width:1020px){.bottom{grid-template-columns:1fr}}
+
+  canvas#graph{display:block;width:100%;height:300px}
+  .slope-out{
+    margin-top:10px;font-size:.8rem;color:var(--muted);text-align:center;
+    background:#0e1728;border:1px solid #1e2c47;border-radius:9px;padding:9px;
+    font-variant-numeric:tabular-nums;line-height:1.6;
+  }
+  .slope-out b{color:#5eead4;font-size:.95rem}
+  .slope-out .calc{font-size:.75rem;color:#ffb347;margin-top:4px}
+
+  .precautions ol{margin:0;padding-left:18px;font-size:.79rem;line-height:1.7;color:#a9bcd8}
+  .precautions li{margin-bottom:8px}
+  .precautions li b{color:#e7eefb}
+
+  /* ============ ANALYSIS CARD ============ */
+  .analysis-card{margin-top:16px}
+  .analysis-card h2{margin-bottom:12px}
+  .an-formula{
+    margin:0 0 14px;padding:12px 16px;text-align:center;
+    font-size:.95rem;font-weight:800;letter-spacing:.4px;
+    color:#5eead4;background:#0c1a24;border:1px dashed #2dd4bf;border-radius:12px;
+    font-variant-numeric:tabular-nums;line-height:1.6;
+  }
+  .an-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:12px 0 14px}
+  .an-stat{background:#0e1728;border:1px solid #1e2c47;border-radius:11px;padding:10px 12px;text-align:center}
+  .an-stat .k{display:block;font-size:.63rem;text-transform:uppercase;letter-spacing:.5px;color:#7f96b8;margin-bottom:5px}
+  .an-stat .v{font-size:.98rem;font-weight:800;color:#e7eefb;font-variant-numeric:tabular-nums}
+  .an-stat.good .v{color:#34d399}
+  .an-stat.bad .v{color:#ff9f6b}
+  .an-h{
+    font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;
+    color:#9fb6d8;margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid #1e2c47;
+  }
+  .an-h:first-child{margin-top:0}
+  .an-p{font-size:.82rem;line-height:1.72;color:#b9cbe4;margin:0 0 9px}
+  .an-p b{color:#e7eefb}
+  .an-list{margin:0 0 10px;padding-left:19px;font-size:.81rem;line-height:1.72;color:#a9bcd8}
+  .an-list li{margin-bottom:5px}
+  .an-list li b{color:#5eead4}
+  .an-verdict{
+    margin:12px 0 12px;padding:11px 14px;border-radius:11px;
+    font-size:.82rem;font-weight:700;line-height:1.55;border:1px solid;
+  }
+  .an-verdict.good{color:#0a2018;background:#34d399;border-color:#0d9e73}
+  .an-verdict.mid{color:#2a1f04;background:#f5c04b;border-color:#d1a135}
+  .an-verdict.bad{color:#2a1408;background:#ff9f6b;border-color:#d97b46}
+
+  /* ============ BOLD FOOTNOTE ============ */
+  .bold-footnote{
+    max-width:1280px;
+    margin:26px auto 0;
+    padding:22px 24px;
+    text-align:center;
+    background:linear-gradient(135deg, rgba(45,212,191,0.10), rgba(122,162,255,0.10));
+    border:2px solid #2dd4bf;
+    border-radius:16px;
+    box-shadow:0 12px 36px -14px rgba(45,212,191,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+    font-weight:800;
+    letter-spacing:0.3px;
+    line-height:1.75;
+  }
+  .bold-footnote .fn-line{
+    font-size:1rem;
+    color:#e7eefb;
+    font-weight:800;
+  }
+  .bold-footnote .fn-line .fn-icon{
+    color:#5eead4;
+    margin-right:6px;
+    font-size:1.05rem;
+  }
+  .bold-footnote .fn-brand{
+    display:block;
+    margin-top:6px;
+    font-size:1.08rem;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:0.9px;
+    background:linear-gradient(90deg,#5eead4,#7aa2ff);
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  .bold-footnote .fn-contact{
+    display:flex;
+    justify-content:center;
+    gap:24px;
+    flex-wrap:wrap;
+    margin-top:10px;
+    font-size:0.9rem;
+    font-weight:800;
+  }
+  .bold-footnote .fn-contact a{
+    color:#5eead4;
+    text-decoration:none;
+    border-bottom:1.5px dashed rgba(94,234,212,0.55);
+    padding-bottom:1px;
+    transition:color .15s, border-color .15s;
+  }
+  .bold-footnote .fn-contact a:hover{
+    color:#7aa2ff;
+    border-bottom-color:#7aa2ff;
+  }
+
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Moments of a Force — Uniform Metre Rule</h1>
+    <p>Locate the centre of gravity <em>G</em>, then balance <em>M₁</em> against <em>M₂</em> to verify <em>M₁x = M₂y</em></p>
+  </header>
+
+  <main>
+    <div class="stage">
+      <canvas id="scene"></canvas>
+      <div class="stage-hint" id="stageHint" hidden>✋ Drag the hanging masses along the rule</div>
+    </div>
+
+    <aside class="panel">
+
+      <!-- STEP 1 -->
+      <section class="card" id="step1Card">
+        <h2>Step 1 · Locate the centre of gravity</h2>
+        <p class="muted">Slide the knife-edge until the uniform rule balances horizontally on it. That point is G.</p>
+        <div class="row-head"><span>Knife-edge position</span><strong id="knifeVal">38.0 cm</strong></div>
+        <input type="range" id="knife" min="20" max="80" step="0.1" value="38" />
+        <div class="mini" id="gOut" style="margin-top:9px">Not balanced</div>
+        <button class="primary" id="startBtn" disabled>Use G = 50.0 cm → Start Step 2</button>
+      </section>
+
+      <!-- STEP 2 -->
+      <section class="card" id="step2Card" hidden>
+        <h2>Step 2 · Balance M₂ against M₁</h2>
+
+        <div class="grid2">
+          <div class="fld">
+            <span>M₁ mass (g)</span>
+            <input type="number" id="m1mass" min="1" max="500" step="1" value="50" />
+            <input type="range" id="m1massSlider" min="1" max="500" step="1" value="50" />
+          </div>
+          <div class="fld">
+            <span>Lever arm x (cm)</span>
+            <input type="number" id="m1dist" min="1" max="45" step="0.1" value="10" />
+            <input type="range" id="m1distSlider" min="1" max="45" step="0.1" value="10" />
+          </div>
+        </div>
+        <p class="note">Pivot fixed at G = 50.0 cm. Drag the hanging blocks on the rule, or use the sliders. Editing M₁ clears recorded readings.</p>
+
+        <div class="row-head">
+          <span>M₂ masses to test (g)</span>
+          <button class="mini-btn" id="addMass">+ Add mass</button>
+        </div>
+        <div class="mass-list" id="massList"></div>
+
+        <div class="row-head"><span>Position of M₂ on rule</span><strong id="posVal">70.0 cm</strong></div>
+        <input type="range" id="m2pos" min="50" max="100" step="0.1" value="70" />
+        <div class="slider-foot">
+          <div class="mini" id="yOut">y = 20.0 cm</div>
+          <button class="mini-btn" id="snapBtn">Snap to balance</button>
+        </div>
+
+        <button class="primary" id="recordBtn" disabled>Record this reading</button>
+      </section>
+
+      <!-- READOUT -->
+      <section class="card readout">
+        <h2>Moment balance</h2>
+        <div class="r acw"><span>Anticlockwise (M₁ × x)</span><b id="acwOut">—</b></div>
+        <div class="r cw"><span>Clockwise (M₂ × y)</span><b id="cwOut">—</b></div>
+        <div class="r"><span>Net moment</span><b id="netOut">—</b></div>
+        <div class="status" id="status">Adjust the knife-edge until the rule is horizontal</div>
+      </section>
+
+      <!-- TABLE -->
+      <section class="card">
+        <h2>Results table</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>M₂ (g)</th>
+              <th>Position (cm)</th>
+              <th>y (cm)</th>
+              <th>1/M₂ (g⁻¹)</th>
+              <th>M₂y (g·cm)</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty-note" id="emptyNote" hidden>No masses defined — add one to begin.</div>
+      </section>
+
+    </aside>
+  </main>
+
+  <section class="bottom">
+    <section class="card">
+      <h2>Graph · y (cm) against 1/M₂ (g⁻¹)</h2>
+      <canvas id="graph"></canvas>
+      <div class="slope-out" id="slopeOut">Record readings to plot the graph</div>
+    </section>
+
+    <section class="card precautions">
+      <h2>Precautions (WAEC standard)</h2>
+      <ol>
+        <li><b>The centre of gravity of the metre rule was first determined</b> by balancing it freely on the knife-edge before any readings were taken, so that the weight of the rule would produce no moment about the pivot.</li>
+        <li><b>Parallax error was avoided</b> by reading the positions on the scale with the eye placed vertically above the mark, and all readings were taken to the nearest 0.1 cm.</li>
+        <li><b>The knife-edge was placed exactly at the centre of gravity</b> of the rule so that the rule remained horizontal on its own without any additional adjustment.</li>
+        <li><b>The masses were added gently</b> and the rule was allowed to settle before each balancing position was read, in order to avoid oscillation.</li>
+        <li><b>The experiment was repeated</b> for several values of M₂ so that the average values could be used to minimise random errors.</li>
+      </ol>
+    </section>
+  </section>
+
+  <!-- ============ AI ANALYSIS ============ -->
+  <section class="card analysis-card">
+    <h2>AI Analysis · Readings, Slope &amp; the Theory of Moments</h2>
+    <div id="analysisOut"></div>
+  </section>
+</div>
+
+<!-- ============ BOLD FOOTNOTE ============ -->
+<div class="bold-footnote">
+  <div class="fn-line">
+    <span class="fn-icon">🎓</span>Designed by <strong>Bamidele Sunday</strong>
+  </div>
+  <span class="fn-brand">Complete Solutions Educational Services</span>
+  <div class="fn-contact">
+    <a href="tel:08060180586">📞 08060180586</a>
+    <a href="mailto:bamideles249@gmail.com">✉️ bamideles249@gmail.com</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     GEOMETRY & CONSTANTS
+     ============================================================ */
+  const VW = 900, VH = 470;
+  const RULE_L = 90, RULE_R = 810, RULE_Y = 200, RULE_H = 14;
+  const PPC = (RULE_R - RULE_L) / 100;            // px per cm
+  const X = cm => RULE_L + cm * PPC;
+
+  const G = 50.0;                                  // centre of gravity (cm)
+  const DEFAULT_SLOTS = [20, 40, 60, 80, 100];
+
+  const MASS_MIN = 1, MASS_MAX = 500;
+  const DIST_MIN = 1, DIST_MAX = 45;
+
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const round1 = v => Math.round(v * 10) / 10;
+
+  /* ============================================================
+     STATE
+     ============================================================ */
+  const state = {
+    phase: 'findG',            // 'findG' | 'experiment'
+    knife: 38.0,
+    angle: 0,
+    vel: 0,
+    m1mass: 50,
+    m1dist: 10.0,
+    slots: DEFAULT_SLOTS.map(m => ({ mass: m, record: null })),
+    active: 0,
+    m2pos: 70.0
+  };
+
+  /* drag / hover tracking */
+  let hovering = null;   // 'M1' | 'M2' | null
+  let drag = null;       // { target: 'M1'|'M2' } | null
+  let hintFaded = false;
+
+  /* ============================================================
+     PHYSICS
+     ============================================================ */
+  function activeSlot() {
+    return state.slots[state.active] || state.slots[0] || null;
+  }
+  function activeMass() {
+    const s = activeSlot();
+    return s ? s.mass : 20;
+  }
+
+  function compute() {
+    const m2 = activeMass();
+    const acw = state.m1mass * state.m1dist;
+    const y = state.m2pos - G;
+    const cw = m2 * y;
+    return {
+      acw, cw, y, m2,
+      net: cw - acw,
+      yNeeded: m2 > 0 ? acw / m2 : Infinity
+    };
+  }
+
+  function tolerance() {
+    return Math.max(5, activeMass() * 0.06);
+  }
+
+  function targetAngle() {
+    if (state.phase === 'findG') {
+      return 0.20 * Math.tanh((G - state.knife) / 8);
+    }
+    const c = compute();
+    const scale = Math.max(220, c.acw * 0.4);
+    return 0.18 * Math.tanh(c.net / scale);
+  }
+
+  /* ============================================================
+     SCENE CANVAS
+     ============================================================ */
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+
+  function fitScene() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width) return;
+    const h = rect.width * VH / VW;
+    canvas.style.height = h + 'px';
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr * rect.width / VW, 0, 0, dpr * h / VH, 0, 0);
+  }
+
+  function rrect(x, y, w, h, r) {
+    r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, VW, VH);
+    const px = (state.phase === 'findG') ? X(state.knife) : X(G);
+    const a = state.angle;
+
+    drawTable();
+    if (state.phase === 'findG') drawFulcrum(px); else drawSuspension(px);
+    drawRule(px, a);
+    if (state.phase === 'experiment') {
+      drawDims(px);
+      drawHangers(px, a);
+      drawMomentArcs(px);
+    }
+    drawBoss(px);
+  }
+
+  function drawTable() {
+    const g = ctx.createLinearGradient(0, 400, 0, VH);
+    g.addColorStop(0, 'rgba(120,160,220,0)');
+    g.addColorStop(1, 'rgba(120,160,220,0.09)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 400, VW, VH - 400);
+
+    ctx.strokeStyle = 'rgba(140,180,240,0.18)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(28, 432);
+    ctx.lineTo(VW - 28, 432);
+    ctx.stroke();
+  }
+
+  function drawFulcrum(px) {
+    const apexY = RULE_Y + 7, baseY = 430;
+    const g = ctx.createLinearGradient(px - 60, apexY, px + 60, baseY);
+    g.addColorStop(0, '#4a628c');
+    g.addColorStop(1, '#1b2942');
+
+    ctx.beginPath();
+    ctx.moveTo(px, apexY);
+    ctx.lineTo(px + 58, baseY);
+    ctx.lineTo(px - 58, baseY);
+    ctx.closePath();
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(150,190,245,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    rrect(px - 84, baseY, 168, 11, 5.5);
+    ctx.fillStyle = '#16223a';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(150,190,245,0.22)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(px, apexY, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#5eead4';
+    ctx.fill();
+  }
+
+  function drawSuspension(px) {
+    const barY = 42, barH = 10;
+    const l = Math.max(26, px - 250);
+    const r = Math.min(VW - 26, px + 250);
+
+    ctx.strokeStyle = 'rgba(150,190,245,0.20)';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(l + 16, barY + barH / 2); ctx.lineTo(l + 16, 430); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r - 16, barY + barH / 2); ctx.lineTo(r - 16, 430); ctx.stroke();
+
+    rrect(l, barY, r - l, barH, 5);
+    ctx.fillStyle = '#22334f';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(150,190,245,0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(px, barY + barH);
+    ctx.lineTo(px, RULE_Y);
+    ctx.strokeStyle = 'rgba(210,232,255,0.8)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+  }
+
+  function drawRule(px, a) {
+    ctx.save();
+    ctx.translate(px, RULE_Y);
+    ctx.rotate(a);
+
+    const L = RULE_L - px, R = RULE_R - px;
+
+    const g = ctx.createLinearGradient(0, -RULE_H / 2, 0, RULE_H / 2);
+    g.addColorStop(0, '#f2f7ff');
+    g.addColorStop(0.45, '#cfdcef');
+    g.addColorStop(1, '#93a8c6');
+    rrect(L, -RULE_H / 2, R - L, RULE_H, 5);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    for (let cm = 0; cm <= 100; cm++) {
+      const x = X(cm) - px;
+      const major = cm % 10 === 0, mid = cm % 5 === 0;
+      const len = major ? 7 : (mid ? 5 : 3);
+      ctx.beginPath();
+      ctx.moveTo(x, RULE_H / 2);
+      ctx.lineTo(x, RULE_H / 2 - len);
+      ctx.strokeStyle = major ? 'rgba(28,48,80,0.85)' : 'rgba(40,65,100,0.5)';
+      ctx.lineWidth = major ? 1.4 : 1;
+      ctx.stroke();
+
+      if (major) {
+        ctx.fillStyle = 'rgba(25,40,66,0.92)';
+        ctx.font = 'bold 8px ui-sans-serif,system-ui,sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(cm, x, -3);
+      }
+    }
+
+    const gx = X(G) - px;
+    ctx.beginPath();
+    ctx.moveTo(gx, -RULE_H / 2);
+    ctx.lineTo(gx - 5, -RULE_H / 2 - 7);
+    ctx.lineTo(gx + 5, -RULE_H / 2 - 7);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(94,234,212,0.95)';
+    ctx.fill();
+
+    ctx.restore();
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  function drawBoss(px) {
+    ctx.beginPath();
+    ctx.arc(px, RULE_Y, 7.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#0d1626';
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#5eead4';
+    ctx.stroke();
+  }
+
+  function fmtMass(m) {
+    return (Math.abs(m - Math.round(m)) < 1e-9 ? String(Math.round(m)) : m.toFixed(1)) + ' g';
+  }
+
+  /* ---- hanger geometry (shared by drawing, hit-testing, dragging) ---- */
+  function hangerGeom(cm, a, px) {
+    if (px === undefined) px = X(G);
+    const cos = Math.cos(a), sin = Math.sin(a);
+    const lx = X(cm) - px;
+    const ax = px + lx * cos - (RULE_H / 2) * sin;
+    const ay = RULE_Y + lx * sin + (RULE_H / 2) * cos;
+    const topY = ay + 34;
+    const by = topY + 8;
+    return { ax, ay, topY, by, bw: 58, bh: 40 };
+  }
+
+  function drawHangers(px, a) {
+    drawHanger(px, a, G - state.m1dist, '#ff6b6b', 'M₁', state.m1mass, hovering === 'M1');
+    drawHanger(px, a, state.m2pos, '#4ecdc4', 'M₂', activeMass(), hovering === 'M2');
+  }
+
+  function drawHanger(px, a, cm, color, tag, mass, highlight) {
+    const g = hangerGeom(cm, a, px);
+    const { ax, ay, topY, by, bw, bh } = g;
+
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(ax, topY);
+    ctx.strokeStyle = 'rgba(200,222,255,0.75)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(ax, topY + 3, 4, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(200,222,255,0.9)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+
+    rrect(ax - bw / 2, by, bw, bh, 9);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    const gl = ctx.createLinearGradient(0, by, 0, by + bh);
+    gl.addColorStop(0, 'rgba(255,255,255,0.45)');
+    gl.addColorStop(0.5, 'rgba(255,255,255,0.06)');
+    gl.addColorStop(1, 'rgba(0,0,0,0.22)');
+    rrect(ax - bw / 2, by, bw, bh, 9);
+    ctx.fillStyle = gl;
+    ctx.fill();
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(10,20,35,0.55)';
+    ctx.font = 'bold 10px ui-sans-serif,system-ui,sans-serif';
+    ctx.fillText(tag, ax, by + 12);
+    ctx.fillStyle = '#0a1526';
+    ctx.font = 'bold 14px ui-sans-serif,system-ui,sans-serif';
+    ctx.fillText(fmtMass(mass), ax, by + 28);
+
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+
+    if (highlight) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(94,234,212,0.9)';
+      ctx.shadowBlur = 14;
+      ctx.strokeStyle = 'rgba(94,234,212,1)';
+      ctx.lineWidth = 2.5;
+      rrect(ax - bw / 2 - 4, by - 4, bw + 8, bh + 8, 12);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawDims(px) {
+    const yLine = 118;
+    dim(X(G - state.m1dist), px, yLine, '#ff8f8f', 'x = ' + state.m1dist.toFixed(1) + ' cm');
+    dim(px, X(state.m2pos), yLine, '#6fe0d8', 'y = ' + (state.m2pos - G).toFixed(1) + ' cm');
+  }
+
+  function dim(x1, x2, y, color, label) {
+    if (Math.abs(x2 - x1) < 3) return;
+    const a = Math.min(x1, x2), b = Math.max(x1, x2);
+
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(a, y);
+    ctx.lineTo(b, y);
+    ctx.stroke();
+
+    arrowHead(a, y, -1, color);
+    arrowHead(b, y, 1, color);
+
+    ctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = color;
+    ctx.fillText(label, (a + b) / 2, y - 6);
+    ctx.restore();
+
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  function arrowHead(x, y, dir, color) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + dir * 8, y - 4.5);
+    ctx.lineTo(x + dir * 8, y + 4.5);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function drawMomentArcs(px) {
+    const c = compute();
+    const ref = Math.max(500, c.acw);
+    arcArrow(px, RULE_Y, 58, -1, c.acw, ref, '#7aa2ff');
+    arcArrow(px, RULE_Y, 58, 1, c.cw, ref, '#ff9f6b');
+  }
+
+  function arcArrow(cx, cy, R, dir, mag, ref, color) {
+    if (mag < 1) return;
+    const t = Math.min(1, mag / ref);
+    const sweep = 0.30 + 0.85 * t;
+    const a0 = -Math.PI / 2;
+    const a1 = a0 + dir * sweep;
+
+    ctx.save();
+    ctx.globalAlpha = 0.4 + 0.5 * t;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2 + 2.5 * t;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, a0, a1, dir < 0);
+    ctx.stroke();
+
+    const ex = cx + R * Math.cos(a1);
+    const ey = cy + R * Math.sin(a1);
+    const tx = -Math.sin(a1) * dir;
+    const ty = Math.cos(a1) * dir;
+    const ang = Math.atan2(ty, tx);
+    const s = 8;
+
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - s * Math.cos(ang - 0.5), ey - s * Math.sin(ang - 0.5));
+    ctx.lineTo(ex - s * Math.cos(ang + 0.5), ey - s * Math.sin(ang + 0.5));
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* ============================================================
+     ANIMATION LOOP
+     ============================================================ */
+  function tick() {
+    const t = targetAngle();
+    state.vel += (t - state.angle) * 0.09;
+    state.vel *= 0.85;
+    state.angle += state.vel;
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  /* ============================================================
+     GRAPH
+     ============================================================ */
+  const gcanvas = document.getElementById('graph');
+  const gctx = gcanvas.getContext('2d');
+  let GW = 0, GH = 0;
+  const padL = 58, padR = 22, padT = 18, padB = 46;
+
+  function fitGraph() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = gcanvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    GW = rect.width;
+    GH = rect.height;
+    gcanvas.width = Math.round(GW * dpr);
+    gcanvas.height = Math.round(GH * dpr);
+    gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawGraph();
+  }
+
+  function graphData() {
+    return state.slots
+      .filter(s => s.record && s.mass > 0)
+      .map(s => ({ M2: s.mass, x: 1 / s.mass, y: s.record.y }));
+  }
+
+  function niceStep(raw) {
+    const e = Math.pow(10, Math.floor(Math.log10(raw)));
+    const f = raw / e;
+    const nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+    return nf * e;
+  }
+
+  function axisInfo(dataMax, minMax, divisions) {
+    const raw = Math.max(dataMax * 1.15, minMax);
+    const step = niceStep(raw / divisions);
+    const max = Math.ceil(raw / step - 1e-9) * step;
+    return { max, step };
+  }
+
+  /* ---- SLOPE TRIANGLE ---- */
+  function drawSlopeTriangle(gx, gy, xMax, yMax, S) {
+    if (!(S > 0)) return;
+
+    const x1 = xMax * 0.15;
+    const x2 = xMax * 0.65;
+    const y1 = S * x1;
+    const y2 = S * x2;
+
+    if (y2 > yMax) return; // triangle would run off the top
+
+    const px1 = gx(x1), py1 = gy(y1);
+    const px2 = gx(x2), py2 = gy(y2);
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const grad = dy / dx;
+
+    gctx.save();
+
+    /* triangle outline */
+    gctx.strokeStyle = 'rgba(255, 179, 71, 0.85)';
+    gctx.lineWidth = 1.8;
+    gctx.setLineDash([5, 3]);
+    gctx.beginPath();
+    gctx.moveTo(px1, py1);
+    gctx.lineTo(px2, py1);
+    gctx.lineTo(px2, py2);
+    gctx.stroke();
+    gctx.setLineDash([]);
+
+    /* right-angle marker */
+    const ra = 7;
+    gctx.beginPath();
+    gctx.moveTo(px2 - ra, py1);
+    gctx.lineTo(px2 - ra, py1 - ra);
+    gctx.lineTo(px2, py1 - ra);
+    gctx.strokeStyle = 'rgba(255, 179, 71, 0.65)';
+    gctx.lineWidth = 1.2;
+    gctx.stroke();
+
+    /* horizontal label Δ(1/M₂) */
+    gctx.fillStyle = '#ffb347';
+    gctx.font = 'bold 9.5px ui-sans-serif,system-ui,sans-serif';
+    gctx.textAlign = 'center';
+    gctx.textBaseline = 'top';
+    gctx.fillText('Δ(1/M₂) = ' + dx.toFixed(3) + ' g⁻¹', (px1 + px2) / 2, py1 + 7);
+
+    /* vertical label Δy */
+    gctx.textAlign = 'left';
+    gctx.textBaseline = 'middle';
+    gctx.fillText('Δy = ' + dy.toFixed(1) + ' cm', px2 + 6, (py1 + py2) / 2);
+
+    /* gradient calculation box (top-left of plot area) */
+    const label = 'Slope = Δy/Δ(1/M₂) = ' + grad.toFixed(1) + ' cm·g';
+    gctx.font = 'bold 10.5px ui-sans-serif,system-ui,sans-serif';
+    const tw = gctx.measureText(label).width;
+    gctx.fillStyle = 'rgba(10, 17, 32, 0.85)';
+    gctx.fillRect(padL + 6, padT + 7, tw + 14, 21);
+    gctx.strokeStyle = 'rgba(255, 179, 71, 0.45)';
+    gctx.lineWidth = 1;
+    gctx.strokeRect(padL + 6, padT + 7, tw + 14, 21);
+    gctx.fillStyle = '#ffb347';
+    gctx.textAlign = 'left';
+    gctx.textBaseline = 'middle';
+    gctx.fillText(label, padL + 13, padT + 18);
+
+    gctx.restore();
+  }
+
+  function drawGraph() {
+    gctx.clearRect(0, 0, GW, GH);
+    if (!GW || !GH) return;
+
+    const data = graphData();
+    const xi = axisInfo(data.length ? Math.max(...data.map(d => d.x)) : 0, 0.06, 5);
+    const yi = axisInfo(data.length ? Math.max(...data.map(d => d.y)) : 0, 30, 6);
+
+    const xMax = xi.max, xStep = xi.step;
+    const yMax = yi.max, yStep = yi.step;
+
+    const gx = x => padL + (x / xMax) * (GW - padL - padR);
+    const gy = y => GH - padB - (y / yMax) * (GH - padT - padB);
+
+    /* grid */
+    gctx.strokeStyle = 'rgba(80,110,160,0.16)';
+    gctx.lineWidth = 1;
+    const nx = Math.round(xMax / xStep);
+    const ny = Math.round(yMax / yStep);
+    for (let i = 0; i <= nx; i++) {
+      const x = i * xStep;
+      gctx.beginPath();
+      gctx.moveTo(gx(x), padT);
+      gctx.lineTo(gx(x), GH - padB);
+      gctx.stroke();
+    }
+    for (let j = 0; j <= ny; j++) {
+      const y = j * yStep;
+      gctx.beginPath();
+      gctx.moveTo(padL, gy(y));
+      gctx.lineTo(GW - padR, gy(y));
+      gctx.stroke();
+    }
+
+    /* axes */
+    gctx.strokeStyle = 'rgba(150,185,235,0.6)';
+    gctx.lineWidth = 1.6;
+    gctx.beginPath();
+    gctx.moveTo(padL, padT - 4);
+    gctx.lineTo(padL, GH - padB);
+    gctx.lineTo(GW - padR + 6, GH - padB);
+    gctx.stroke();
+
+    /* tick labels */
+    gctx.fillStyle = '#7f96b8';
+    gctx.font = '10px ui-sans-serif,system-ui,sans-serif';
+    gctx.textAlign = 'center';
+    gctx.textBaseline = 'top';
+
+    const xDec = xStep >= 1 ? 0 : xStep >= 0.1 ? 1 : xStep >= 0.01 ? 2 : 3;
+    for (let i = 0; i <= nx; i++) {
+      gctx.fillText((i * xStep).toFixed(xDec), gx(i * xStep), GH - padB + 6);
+    }
+
+    gctx.textAlign = 'right';
+    gctx.textBaseline = 'middle';
+    const yDec = yStep >= 1 ? 0 : 1;
+    for (let j = 0; j <= ny; j++) {
+      gctx.fillText((j * yStep).toFixed(yDec), padL - 8, gy(j * yStep));
+    }
+
+    /* axis titles */
+    gctx.fillStyle = '#9fb6d8';
+    gctx.font = 'bold 11px ui-sans-serif,system-ui,sans-serif';
+    gctx.textAlign = 'center';
+    gctx.textBaseline = 'top';
+    gctx.fillText('1/M₂  (g⁻¹)', (padL + GW - padR) / 2, GH - 18);
+
+    gctx.save();
+    gctx.translate(16, (padT + GH - padB) / 2);
+    gctx.rotate(-Math.PI / 2);
+    gctx.textBaseline = 'middle';
+    gctx.fillText('y  (cm)', 0, 0);
+    gctx.restore();
+
+    const slopeOut = document.getElementById('slopeOut');
+
+    if (data.length === 0) {
+      gctx.fillStyle = 'rgba(140,165,200,0.55)';
+      gctx.font = '13px ui-sans-serif,system-ui,sans-serif';
+      gctx.textAlign = 'center';
+      gctx.textBaseline = 'middle';
+      gctx.fillText('No readings yet — balance the rule and record data',
+                   (padL + GW - padR) / 2, (padT + GH - padB) / 2);
+      slopeOut.innerHTML = 'Record readings to plot the graph';
+      return;
+    }
+
+    /* gradient through origin */
+    let sxy = 0, sxx = 0;
+    data.forEach(d => { sxy += d.x * d.y; sxx += d.x * d.x; });
+    const S = sxx > 0 ? sxy / sxx : 0;
+
+    let xEnd = xMax;
+    if (S > 0 && S * xMax > yMax) xEnd = yMax / S;
+
+    /* best-fit line */
+    gctx.strokeStyle = 'rgba(94,234,212,0.9)';
+    gctx.lineWidth = 2;
+    gctx.beginPath();
+    gctx.moveTo(gx(0), gy(0));
+    gctx.lineTo(gx(xEnd), gy(S * xEnd));
+    gctx.stroke();
+
+    /* slope triangle (drawn under the data points) */
+    if (data.length >= 2) drawSlopeTriangle(gx, gy, xMax, yMax, S);
+
+    /* data points */
+    data.forEach(d => {
+      const cx = gx(d.x), cy = gy(d.y);
+
+      gctx.beginPath();
+      gctx.arc(cx, cy, 5.5, 0, Math.PI * 2);
+      gctx.fillStyle = '#ffd93d';
+      gctx.fill();
+      gctx.strokeStyle = '#0a1120';
+      gctx.lineWidth = 1.5;
+      gctx.stroke();
+
+      gctx.fillStyle = '#cfe0f8';
+      gctx.font = 'bold 9px ui-sans-serif,system-ui,sans-serif';
+      gctx.textAlign = 'left';
+      gctx.textBaseline = 'bottom';
+      gctx.fillText(fmtMass(d.M2), cx + 8, cy - 3);
+    });
+
+    /* readout */
+    const theory = state.m1mass * state.m1dist;
+    const pct = theory > 0 ? Math.abs(S - theory) / theory * 100 : 0;
+
+    let calcHtml = '';
+    if (data.length >= 2 && S > 0) {
+      const x1 = xMax * 0.15, x2 = xMax * 0.65;
+      const y1 = S * x1, y2 = S * x2;
+      calcHtml = '<div class="calc">Slope triangle: Δy = ' + (y2 - y1).toFixed(1) +
+                 ' cm, Δ(1/M₂) = ' + (x2 - x1).toFixed(3) +
+                 ' g⁻¹ → gradient = ' + ((y2 - y1) / (x2 - x1)).toFixed(1) + ' cm·g</div>';
+    }
+
+    slopeOut.innerHTML =
+      'Gradient S = <b>' + S.toFixed(1) + ' cm·g</b><br>' +
+      'Theory M₁x = ' + fmtMass(state.m1mass) + ' × ' + state.m1dist.toFixed(1) +
+      ' cm = <b>' + theory.toFixed(1) + ' g·cm</b> &nbsp;|&nbsp; Difference = <b>' +
+      pct.toFixed(1) + '%</b>' + calcHtml;
+  }
+
+  /* ============================================================
+     STATISTICS FOR THE ANALYSIS
+     ============================================================ */
+  function computeStats() {
+    const data = graphData();
+    const n = data.length;
+    const theory = state.m1mass * state.m1dist;
+
+    let sxy = 0, sxx = 0;
+    data.forEach(d => { sxy += d.x * d.y; sxx += d.x * d.x; });
+    const S = sxx > 0 ? sxy / sxx : 0;
+
+    let freeSlope = null, intercept = null;
+    if (n >= 2) {
+      let sx = 0, sy = 0;
+      data.forEach(d => { sx += d.x; sy += d.y; });
+      const den = n * sxx - sx * sx;
+      if (Math.abs(den) > 1e-12) {
+        freeSlope = (n * sxy - sx * sy) / den;
+        intercept = (sy - freeSlope * sx) / n;
+      }
+    }
+
+    const pct = theory > 0 ? Math.abs(S - theory) / theory * 100 : 0;
+    const meanProd = n ? data.reduce((s, d) => s + d.M2 * d.y, 0) / n : 0;
+
+    return { data, n, theory, S, pct, freeSlope, intercept, meanProd };
+  }
+
+  function statBox(k, v, cls) {
+    return '<div class="an-stat' + (cls ? ' ' + cls : '') + '">' +
+           '<span class="k">' + k + '</span>' +
+           '<span class="v">' + v + '</span></div>';
+  }
+
+  /* ============================================================
+     AI ANALYSIS PANEL
+     ============================================================ */
+  function updateAnalysis() {
+    const el = document.getElementById('analysisOut');
+    if (!el) return;
+
+    const st = computeStats();
+    const { data, n, theory, S, pct, freeSlope, intercept, meanProd } = st;
+
+    const formula =
+      '<div class="an-formula">M₁g·x = M₂g·y &nbsp;⟹&nbsp; M₁x = M₂y &nbsp;⟹&nbsp; y = (M₁x) · (1/M₂)</div>';
+
+    const theoryBlock =
+      '<div class="an-h">Theory · moments &amp; equilibrium of forces</div>' +
+      '<p class="an-p">The <b>principle of moments</b> states that when a body is in rotational equilibrium, the sum of the clockwise moments about any point equals the sum of the anticlockwise moments about that same point, where a moment = <b>force × perpendicular distance from the pivot</b>.</p>' +
+      '<p class="an-p">The metre rule is balanced on the knife-edge at its centre of gravity <b>G</b>, so the rule\'s own weight acts through the pivot and therefore produces <b>no moment</b>. The two hanging masses then supply the only moments acting:</p>' +
+      '<ul class="an-list">' +
+        '<li>M₁ hangs <b>x</b> cm to the left of G → anticlockwise moment = <b>M₁g·x</b></li>' +
+        '<li>M₂ hangs <b>y</b> cm to the right of G → clockwise moment = <b>M₂g·y</b></li>' +
+      '</ul>' +
+      '<p class="an-p"><b>Equilibrium of forces:</b> vertically, the upward reaction of the pivot balances the total weight (M₁ + M₂ + W<sub>rule</sub>)g, so the rule has zero resultant force and does not accelerate up or down. <b>Equilibrium of moments:</b> M₁g·x = M₂g·y. The acceleration due to gravity g is common to both sides and cancels, leaving the working relation <b>M₁x = M₂y</b> — the product (mass × distance) on each side of the pivot is constant.</p>' +
+      '<p class="an-p">Rearranging gives <b>y = (M₁x)·(1/M₂)</b>, which is of the form y = m·(1/M₂). So a graph of <b>y against 1/M₂</b> should be a <b>straight line through the origin</b> whose <b>gradient equals M₁x</b>, the fixed moment of M₁ about the pivot. Measuring that gradient and comparing it with the calculated value of M₁x is a direct experimental test of the principle of moments.</p>' +
+      '<p class="an-p"><b>Slope triangle method:</b> On the graph, a right-angled triangle is drawn with its hypotenuse along the best-fit line. The vertical side gives <b>Δy</b> and the horizontal side gives <b>Δ(1/M₂)</b>. The gradient is then calculated as <b>S = Δy / Δ(1/M₂)</b>, which should equal M₁x. Using a large triangle reduces the percentage error in the gradient.</p>';
+
+    if (!n) {
+      el.innerHTML = formula + theoryBlock +
+        '<div class="an-h">Analysis of your readings</div>' +
+        '<p class="an-p">No readings recorded yet. Balance the rule for two or more different values of M₂ and press <b>Record this reading</b>. The gradient, the comparison with M₁x, and a full interpretation of your data will appear here automatically.</p>';
+      return;
+    }
+
+    const items = data.slice().sort((a, b) => a.M2 - b.M2).map(d => {
+      const prod = d.M2 * d.y;
+      const dev = theory > 0 ? Math.abs(prod - theory) / theory * 100 : 0;
+      return '<li>M₂ = <b>' + d.M2.toFixed(1) + ' g</b> at y = <b>' + d.y.toFixed(1) +
+             ' cm</b> → M₂y = <b>' + prod.toFixed(1) + ' g·cm</b> &nbsp;(' +
+             dev.toFixed(1) + '% from M₁x)</li>';
+    }).join('');
+
+    let verdict, vClass;
+    if (pct <= 5) {
+      verdict = '✓ Excellent agreement — the measured gradient reproduces M₁x to within 5%. The principle of moments is verified and the rule behaves as a uniform body pivoted at its centre of gravity.';
+      vClass = 'good';
+    } else if (pct <= 12) {
+      verdict = '✓ Good agreement — the gradient is close to M₁x. The small difference is consistent with parallax and reading errors of ±0.1 cm on the rule.';
+      vClass = 'good';
+    } else if (pct <= 25) {
+      verdict = '⚠ Fair agreement — the trend is correct (y falls as M₂ rises) but the scatter is noticeable. Repeat each balancing position and read the scale more carefully to reduce random error.';
+      vClass = 'mid';
+    } else {
+      verdict = '✗ Poor agreement — the gradient is far from M₁x. Check that the pivot is exactly at G, that the rule is horizontal when read, and that each M₂ value matches the mass actually hung.';
+      vClass = 'bad';
+    }
+
+    const fitNote = (freeSlope !== null && intercept !== null)
+      ? '<p class="an-p">A free (unforced) best-fit line y = a + b(1/M₂) gives gradient b = <b>' +
+        freeSlope.toFixed(1) + ' cm·g</b> and intercept a = <b>' + intercept.toFixed(2) +
+        ' cm</b>. An intercept close to zero confirms the line passes through the origin, exactly as the theory requires; a large intercept would indicate a systematic error such as the pivot not being exactly at G or the rule not being uniform.</p>'
+      : '<p class="an-p">Record at least two different masses to fit a full straight line and examine its intercept.</p>';
+
+    el.innerHTML = formula + theoryBlock +
+      '<div class="an-h">Analysis of your readings</div>' +
+      '<div class="an-grid">' +
+        statBox('Readings', String(n)) +
+        statBox('M₁x (theory)', theory.toFixed(1) + ' g·cm') +
+        statBox('Gradient S', S.toFixed(1) + ' cm·g') +
+        statBox('Mean M₂y', meanProd.toFixed(1) + ' g·cm') +
+        statBox('Difference', pct.toFixed(1) + '%', pct <= 10 ? 'good' : 'bad') +
+      '</div>' +
+      '<p class="an-p">Every balanced reading must satisfy <b>M₁x = M₂y</b>. Checking the product M₂ × y for each reading against the constant moment of M₁:</p>' +
+      '<ul class="an-list">' + items + '</ul>' +
+      '<div class="an-verdict ' + vClass + '">' + verdict + '</div>' +
+      fitNote +
+      '<div class="an-h">Why the graph is a straight line through the origin</div>' +
+      '<p class="an-p">Because M₁x is fixed throughout the experiment, doubling M₂ must halve the balancing distance y — the two are <b>inversely proportional</b>. Plotting y against <b>1/M₂</b> linearises this inverse relation, giving a straight line through the origin with gradient M₁x. The fact that the plotted points lie on such a line shows that the moment of M₁ about G has been transferred, unchanged, to M₂ — i.e. the rule is in rotational equilibrium at every recorded balance point.</p>' +
+      '<div class="an-h">How the slope triangle confirms the gradient</div>' +
+      '<p class="an-p">On the graph, the <b>slope triangle</b> (drawn in orange) has its hypotenuse along the best-fit line. The horizontal side is Δ(1/M₂) and the vertical side is Δy. Since the line passes through the origin, the gradient calculated from the triangle is exactly S = Δy/Δ(1/M₂). If the triangle is made large, the percentage error in Δy and Δ(1/M₂) is small, and the gradient obtained is reliable. Comparing this gradient with the calculated M₁x verifies the principle of moments quantitatively.</p>' +
+      '<div class="an-h">Likely sources of error</div>' +
+      '<ul class="an-list">' +
+        '<li><b>Parallax</b> when reading the 0.1 cm scale — view the rule vertically from above.</li>' +
+        '<li><b>Pivot not exactly at G</b> — the rule\'s own weight then has a small moment and shifts every reading by the same amount (giving a non-zero intercept).</li>' +
+        '<li><b>Mass of hangers, thread and tape</b> not included in M₁ or M₂.</li>' +
+        '<li><b>Friction at the knife-edge</b>, or a rule that is not perfectly uniform.</li>' +
+        '<li><b>Oscillation</b> — readings taken before the rule has settled.</li>' +
+      '</ul>';
+  }
+
+  /* ============================================================
+     UI ELEMENTS
+     ============================================================ */
+  const knifeSlider = document.getElementById('knife');
+  const knifeVal = document.getElementById('knifeVal');
+  const gOut = document.getElementById('gOut');
+  const startBtn = document.getElementById('startBtn');
+  const step1Card = document.getElementById('step1Card');
+  const step2Card = document.getElementById('step2Card');
+  const stageHint = document.getElementById('stageHint');
+
+  const m1massInput = document.getElementById('m1mass');
+  const m1distInput = document.getElementById('m1dist');
+  const m1massSlider = document.getElementById('m1massSlider');
+  const m1distSlider = document.getElementById('m1distSlider');
+  const addMassBtn = document.getElementById('addMass');
+  const massListEl = document.getElementById('massList');
+
+  const m2posSlider = document.getElementById('m2pos');
+  const posVal = document.getElementById('posVal');
+  const yOut = document.getElementById('yOut');
+  const snapBtn = document.getElementById('snapBtn');
+  const recordBtn = document.getElementById('recordBtn');
+
+  const acwOut = document.getElementById('acwOut');
+  const cwOut = document.getElementById('cwOut');
+  const netOut = document.getElementById('netOut');
+  const statusEl = document.getElementById('status');
+
+  const tbody = document.getElementById('tbody');
+  const emptyNote = document.getElementById('emptyNote');
+
+  /* ============================================================
+     MASS LIST
+     ============================================================ */
+  function renderMassList() {
+    massListEl.innerHTML = '';
+    state.slots.forEach((slot, i) => {
+      const row = document.createElement('div');
+      row.className = 'mass-row' + (i === state.active ? ' active' : '');
+      row.dataset.i = i;
+
+      const top = document.createElement('div');
+      top.className = 'mass-top';
+
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'mass-input';
+      input.min = MASS_MIN; input.max = MASS_MAX; input.step = 1;
+      input.value = slot.mass;
+      input.setAttribute('aria-label', 'Mass for slot ' + (i + 1) + ' in grams');
+
+      const unit = document.createElement('span');
+      unit.className = 'unit';
+      unit.textContent = 'g';
+
+      const flag = document.createElement('span');
+      flag.className = 'rec-flag';
+      flag.textContent = slot.record ? '✓' : '';
+
+      const del = document.createElement('button');
+      del.className = 'del';
+      del.type = 'button';
+      del.title = 'Remove this mass';
+      del.textContent = '×';
+      del.disabled = state.slots.length <= 1;
+
+      top.append(dot, input, unit, flag, del);
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.className = 'mass-slider';
+      slider.min = MASS_MIN; slider.max = MASS_MAX; slider.step = 1;
+      slider.value = slot.mass;
+      slider.setAttribute('aria-label', 'Mass slider for slot ' + (i + 1));
+
+      row.append(top, slider);
+      massListEl.appendChild(row);
+
+      row.addEventListener('click', e => {
+        if (e.target === del) return;
+        selectSlot(i);
+      });
+
+      input.addEventListener('input', () => {
+        const v = parseFloat(input.value);
+        if (isFinite(v) && v >= MASS_MIN && v <= MASS_MAX) {
+          slider.value = v;
+          applyMass(i, v);
+        }
+      });
+      input.addEventListener('change', () => {
+        let v = parseFloat(input.value);
+        if (!isFinite(v)) v = state.slots[i] ? state.slots[i].mass : 20;
+        v = clamp(Math.round(v), MASS_MIN, MASS_MAX);
+        input.value = v;
+        slider.value = v;
+        applyMass(i, v);
+      });
+
+      slider.addEventListener('input', () => {
+        const v = +slider.value;
+        input.value = v;
+        applyMass(i, v);
+      });
+
+      del.addEventListener('click', e => {
+        e.stopPropagation();
+        removeSlot(i);
+      });
+    });
+  }
+
+  function selectSlot(i) {
+    if (i === state.active) return;
+    state.active = i;
+    massListEl.querySelectorAll('.mass-row').forEach((r, j) =>
+      r.classList.toggle('active', j === i));
+    updateUI();
+  }
+
+  function applyMass(i, v) {
+    const slot = state.slots[i];
+    if (!slot || slot.mass === v) return;
+    slot.mass = v;
+    if (slot.record) {
+      slot.record = null;
+      refreshRecordFlags();
+      renderTable();
+      drawGraph();
+    }
+    updateUI();
+  }
+
+  function refreshRecordFlags() {
+    massListEl.querySelectorAll('.mass-row').forEach((row, i) => {
+      const flag = row.querySelector('.rec-flag');
+      if (flag) flag.textContent = (state.slots[i] && state.slots[i].record) ? '✓' : '';
+    });
+  }
+
+  function addSlot() {
+    const used = new Set(state.slots.map(s => s.mass));
+    let m = 20;
+    while (used.has(m) && m < MASS_MAX - 10) m += 20;
+    if (used.has(m)) {
+      m = clamp(Math.round(Math.max(...state.slots.map(s => s.mass)) + 10), MASS_MIN, MASS_MAX);
+    }
+    state.slots.push({ mass: m, record: null });
+    state.active = state.slots.length - 1;
+    renderMassList();
+    renderTable();
+    drawGraph();
+    updateUI();
+  }
+
+  function removeSlot(i) {
+    if (state.slots.length <= 1) return;
+    state.slots.splice(i, 1);
+    if (state.active > i) state.active--;
+    else if (state.active === i) state.active = Math.min(i, state.slots.length - 1);
+    renderMassList();
+    renderTable();
+    drawGraph();
+    updateUI();
+  }
+
+  /* ============================================================
+     TABLE
+     ============================================================ */
+  function renderTable() {
+    tbody.innerHTML = '';
+    emptyNote.hidden = state.slots.length > 0;
+
+    state.slots.forEach(s => {
+      const tr = document.createElement('tr');
+      if (s.record) tr.className = 'filled';
+      const massTxt = s.mass.toFixed(1);
+      const posTxt = s.record ? s.record.pos.toFixed(1) : '—';
+      const yTxt = s.record ? s.record.y.toFixed(1) : '—';
+      const invTxt = (1 / s.mass).toFixed(3);
+      const prodTxt = s.record ? (s.mass * s.record.y).toFixed(1) : '—';
+
+      tr.innerHTML =
+        '<td>' + massTxt + '</td>' +
+        '<td>' + posTxt + '</td>' +
+        '<td>' + yTxt + '</td>' +
+        '<td>' + invTxt + '</td>' +
+        '<td>' + prodTxt + '</td>';
+      tbody.appendChild(tr);
+    });
+
+    updateAnalysis();
+  }
+
+  /* ============================================================
+     CLEAR RECORDS
+     ============================================================ */
+  function clearRecords() {
+    let changed = false;
+    state.slots.forEach(s => { if (s.record) { s.record = null; changed = true; } });
+    if (changed) {
+      refreshRecordFlags();
+      renderTable();
+      drawGraph();
+    }
+  }
+
+  /* ============================================================
+     MAIN UI UPDATE
+     ============================================================ */
+  function updateUI() {
+    /* ---- Step 1 ---- */
+    knifeVal.textContent = state.knife.toFixed(1) + ' cm';
+    const bal1 = Math.abs(G - state.knife) <= 0.15;
+    gOut.className = 'mini' + (bal1 ? ' ok' : '');
+    gOut.textContent = bal1
+      ? '✓ Balanced — the centre of gravity G is at 50.0 cm'
+      : (state.knife < G ? 'Right side dips — move the knife-edge right'
+                         : 'Left side dips — move the knife-edge left');
+    startBtn.disabled = !bal1;
+
+    /* ---- Step 2 ---- */
+    if (state.phase === 'experiment') {
+      const c = compute();
+      posVal.textContent = state.m2pos.toFixed(1) + ' cm';
+      yOut.textContent = 'y = ' + c.y.toFixed(1) + ' cm';
+
+      acwOut.textContent = c.acw.toFixed(1) + ' g·cm';
+      cwOut.textContent = c.cw.toFixed(1) + ' g·cm';
+      netOut.textContent = (c.net > 0 ? '+' : '') + c.net.toFixed(1) + ' g·cm';
+
+      const tol = tolerance();
+      const balanced = Math.abs(c.net) <= tol;
+
+      if (balanced) {
+        statusEl.className = 'status ok';
+        statusEl.textContent = '✓ Balanced — you may record this reading';
+      } else if (c.yNeeded > 50.02 && c.net < 0) {
+        statusEl.className = 'status acw';
+        statusEl.textContent = '⚠ M₂ too small — required y (' +
+          c.yNeeded.toFixed(1) + ' cm) lies beyond the rule';
+      } else if (c.net > 0) {
+        statusEl.className = 'status cw';
+        statusEl.textContent = '↻ Clockwise — M₂ too heavy / too far right';
+      } else {
+        statusEl.className = 'status acw';
+        statusEl.textContent = '↺ Anticlockwise — M₂ too light / too close to the pivot';
+      }
+      recordBtn.disabled = !balanced;
+    } else {
+      acwOut.textContent = '—';
+      cwOut.textContent = '—';
+      netOut.textContent = '—';
+      statusEl.className = 'status' + (bal1 ? ' ok' : '');
+      statusEl.textContent = bal1
+        ? '✓ Rule balanced — G located at 50.0 cm'
+        : 'Adjust the knife-edge until the rule is horizontal';
+      recordBtn.disabled = true;
+    }
+  }
+
+  /* ============================================================
+     DRAG-AND-DROP
+     ============================================================ */
+  function pointerToVirtual(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) / rect.width * VW,
+      y: (e.clientY - rect.top) / rect.height * VH
+    };
+  }
+
+  function screenXToCm(mouseX) {
+    const px = X(G);
+    const a = state.angle;
+    const cosA = Math.cos(a), sinA = Math.sin(a);
+    const lx = (mouseX - px + (RULE_H / 2) * sinA) / cosA;
+    return G + lx / PPC;
+  }
+
+  function hitTest(vx, vy) {
+    if (state.phase !== 'experiment') return null;
+    const a = state.angle;
+    const m = 7;
+    const targets = [
+      { key: 'M1', cm: G - state.m1dist },
+      { key: 'M2', cm: state.m2pos }
+    ];
+    for (const t of targets) {
+      const g = hangerGeom(t.cm, a);
+      if (vx >= g.ax - g.bw / 2 - m && vx <= g.ax + g.bw / 2 + m &&
+          vy >= g.by - m && vy <= g.by + g.bh + m) {
+        return t.key;
+      }
+    }
+    return null;
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    if (state.phase !== 'experiment') return;
+    const p = pointerToVirtual(e);
+    const hit = hitTest(p.x, p.y);
+    if (!hit) return;
+    drag = { target: hit };
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    canvas.style.cursor = 'grabbing';
+    if (!hintFaded) {
+      hintFaded = true;
+      stageHint.classList.add('fade');
+    }
+    e.preventDefault();
+  });
+
+  canvas.addEventListener('pointermove', e => {
+    const p = pointerToVirtual(e);
+
+    if (drag) {
+      const cm = screenXToCm(p.x);
+      if (drag.target === 'M1') {
+        const pos = clamp(cm, G - DIST_MAX, G - DIST_MIN);
+        const x = round1(G - pos);
+        applyM1(state.m1mass, x);
+        m1distInput.value = x.toFixed(1);
+        m1distSlider.value = x;
+      } else {
+        const pos = round1(clamp(cm, G, 100));
+        if (pos !== state.m2pos) {
+          state.m2pos = pos;
+          m2posSlider.value = pos;
+          updateUI();
+        }
+      }
+      e.preventDefault();
+      return;
+    }
+
+    if (state.phase !== 'experiment') {
+      if (hovering !== null) {
+        hovering = null;
+        canvas.style.cursor = 'default';
+      }
+      return;
+    }
+
+    const hit = hitTest(p.x, p.y);
+    if (hit !== hovering) {
+      hovering = hit;
+      canvas.style.cursor = hit ? 'grab' : 'default';
+    }
+  });
+
+  function endDrag(e) {
+    if (!drag) return;
+    drag = null;
+    canvas.style.cursor = hovering ? 'grab' : 'default';
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+  }
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', e => {
+    drag = null;
+    canvas.style.cursor = 'default';
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+  });
+  canvas.addEventListener('pointerleave', () => {
+    if (!drag && hovering !== null) {
+      hovering = null;
+      canvas.style.cursor = 'default';
+    }
+  });
+
+  /* ============================================================
+     EVENTS
+     ============================================================ */
+  knifeSlider.addEventListener('input', () => {
+    state.knife = +knifeSlider.value;
+    updateUI();
+  });
+
+  startBtn.addEventListener('click', () => {
+    state.phase = 'experiment';
+    state.knife = G;
+    state.angle = 0;
+    state.vel = 0;
+    state.m2pos = 70.0;
+    m2posSlider.value = state.m2pos;
+    step1Card.hidden = true;
+    step2Card.hidden = false;
+    stageHint.hidden = false;
+    renderMassList();
+    renderTable();
+    updateUI();
+  });
+
+  /* --- M₁ mass & lever arm --- */
+  function applyM1(m, d) {
+    if (m === state.m1mass && d === state.m1dist) { updateUI(); return; }
+    state.m1mass = m;
+    state.m1dist = d;
+    clearRecords();
+    updateUI();
+    drawGraph();
+    updateAnalysis();
+  }
+
+  m1massInput.addEventListener('input', () => {
+    const v = parseFloat(m1massInput.value);
+    if (isFinite(v) && v >= MASS_MIN && v <= MASS_MAX) {
+      m1massSlider.value = v;
+      applyM1(v, state.m1dist);
+    }
+  });
+  m1massInput.addEventListener('change', () => {
+    let v = parseFloat(m1massInput.value);
+    if (!isFinite(v)) v = state.m1mass;
+    v = clamp(Math.round(v), MASS_MIN, MASS_MAX);
+    m1massInput.value = v;
+    m1massSlider.value = v;
+    applyM1(v, state.m1dist);
+  });
+  m1massSlider.addEventListener('input', () => {
+    const v = +m1massSlider.value;
+    m1massInput.value = v;
+    applyM1(v, state.m1dist);
+  });
+
+  m1distInput.addEventListener('input', () => {
+    const v = parseFloat(m1distInput.value);
+    if (isFinite(v) && v >= DIST_MIN && v <= DIST_MAX) {
+      m1distSlider.value = v;
+      applyM1(state.m1mass, round1(v));
+    }
+  });
+  m1distInput.addEventListener('change', () => {
+    let v = parseFloat(m1distInput.value);
+    if (!isFinite(v)) v = state.m1dist;
+    v = clamp(round1(v), DIST_MIN, DIST_MAX);
+    m1distInput.value = v.toFixed(1);
+    m1distSlider.value = v;
+    applyM1(state.m1mass, v);
+  });
+  m1distSlider.addEventListener('input', () => {
+    const v = +m1distSlider.value;
+    m1distInput.value = v.toFixed(1);
+    applyM1(state.m1mass, v);
+  });
+
+  /* --- M₂ position --- */
+  m2posSlider.addEventListener('input', () => {
+    state.m2pos = +m2posSlider.value;
+    updateUI();
+  });
+
+  snapBtn.addEventListener('click', () => {
+    const c = compute();
+    const target = Math.min(100, Math.max(50, G + c.yNeeded));
+    state.m2pos = Math.round(target * 10) / 10;
+    m2posSlider.value = state.m2pos;
+    updateUI();
+  });
+
+  recordBtn.addEventListener('click', () => {
+    const slot = activeSlot();
+    if (!slot) return;
+    const c = compute();
+    slot.record = {
+      pos: +state.m2pos.toFixed(1),
+      y: +c.y.toFixed(1)
+    };
+    refreshRecordFlags();
+    renderTable();
+    drawGraph();
+    updateUI();
+  });
+
+  addMassBtn.addEventListener('click', addSlot);
+
+  /* ============================================================
+     RESIZE
+     ============================================================ */
+  window.addEventListener('resize', () => {
+    fitScene();
+    fitGraph();
+  });
+
+  /* ============================================================
+     BOOT
+     ============================================================ */
+  m1massInput.value = state.m1mass;
+  m1massSlider.value = state.m1mass;
+  m1distInput.value = state.m1dist.toFixed(1);
+  m1distSlider.value = state.m1dist;
+  m2posSlider.value = state.m2pos;
+
+  renderMassList();
+  renderTable();
+  fitScene();
+  fitGraph();
+  updateUI();
+  updateAnalysis();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
